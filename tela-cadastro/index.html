@@ -9,6 +9,7 @@
 <body>
     <div class="main-container">
         <h1>Cadastro de Usuário</h1>
+        <img src="img/logo-codego.png" alt="Logo CodeGo" class="logo">
         <form action="/processar_cadastro" method="post">
             <label for="nome">Nome:</label>
             <input type="text" id="nome" name="nome" required><br><br>
@@ -34,9 +35,13 @@
                 <option value="financeiro">Financeiro</option>
             </select><br><br>
 
+            <div id="buttons">
+                <button type="button">Excluir</button>
+                <button type="button">Imprimir</button>
+                <button type="reset">Limpar</button>
+            </div>
+            
             <button type="submit">Cadastrar</button>
-            <button type="reset">Limpar</button>
-
         </form>
     </div>
 </body>
