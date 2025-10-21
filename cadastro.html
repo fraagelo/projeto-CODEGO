@@ -10,24 +10,24 @@
     <div class="main-container">
         <h1>Cadastro de Usuário</h1>
         <img src="/img/logo-codego.png" alt="Logo CodeGo" class="logo">
-        <form action="/cadastro/" method="post">
+        <form id="cadastroForm">
             <label for="nome">Nome:</label>
-            <input type="text" id="nome" name="nome" required><br><br>
+            <input type="text" id="nome" required><br><br>
 
             <label for="login">Login:</label>
-            <input type="text" id="login" name="login" required><br><br>
+            <input type="text" id="login" required><br><br>
 
             <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required><br><br>
+            <input type="email" id="email" required><br><br>
 
             <label for="senha">Senha:</label>
-            <input type="password" id="senha" name="senha" required><br><br>
+            <input type="password" id="senha" required><br><br>
 
             <label for="confirmar_senha">Confirmar Senha:</label>
-            <input type="password" id="confirmar_senha" name="confirmar_senha" required><br><br>
+            <input type="password" id="confirmar_senha" required><br><br>
 
             <label for="departamento">Departamento:</label>
-            <select name="departamento" id="departamento" required>
+            <select id="departamento" required>
                 <option value="vendas">Vendas</option>
                 <option value="marketing">Marketing</option>
                 <option value="desenvolvimento">Desenvolvimento</option>
@@ -35,14 +35,9 @@
                 <option value="financeiro">Financeiro</option>
             </select><br><br>
 
-            <div id="buttons">
-                <button type="button">Excluir</button>
-                <button type="button">Imprimir</button>
-                <button type="reset">Limpar</button>
-            </div>
-            
             <button type="submit">Cadastrar</button>
         </form>
     </div>
+    <script src="cadastro.js"></script>
 </body>
 </html>
