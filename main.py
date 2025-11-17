@@ -10,10 +10,12 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
 
-
+# --- Configurações de Segurança e Constantes ---
 SECRET_KEY = "CHAVESECRETAFODA"  # guarde fora do código em produção
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Removemos a constante BCRYPT_MAX_LENGTH_BYTES pois o SHA256 não tem essa limitação.
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -24,8 +26,6 @@ def criar_token_acesso(data: dict, expires_delta: timedelta | None = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
-
 
 
 # 1️ Cria o app
@@ -47,6 +47,7 @@ app.add_middleware(
 )
 
 # 3️ Banco de dados
+# Lembrete: A senha do seu banco de dados está exposta aqui. Em produção, use variáveis de ambiente.
 SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://root:Joaolopes05%3A@localhost:3306/projeto_codego"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -58,6 +59,7 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(150), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
+    # 255 é suficiente para o hash sha256_crypt
     senha_hash = Column(String(255), nullable=False)
     login = Column(String(100), unique=True, nullable=False)
     departamento = Column(String(100), nullable=False)
@@ -73,12 +75,19 @@ class UsuarioCreate(BaseModel):
     departamento: str
 
 # 6️ Segurança e utilidades
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# MUDANÇA: Alterado de "bcrypt" para "sha256_crypt" para evitar o erro de compatibilidade.
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 def hash_senha(senha: str):
+    """
+    Cria o hash da senha usando sha256_crypt. Não é mais necessário truncar a senha.
+    """
     return pwd_context.hash(senha)
 
 def verificar_senha(senha: str, senha_hash: str):
+    """
+    Verifica a senha usando sha256_crypt.
+    """
     return pwd_context.verify(senha, senha_hash)
 
 def get_db():
@@ -118,6 +127,7 @@ def cadastro(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     if existe_login:
         raise HTTPException(status_code=400, detail="Login já em uso")
 
+    # Usando sha256_crypt
     senha_hash = hash_senha(usuario.senha)
     novo_usuario = Usuario(
         nome=usuario.nome,
@@ -135,6 +145,8 @@ def cadastro(usuario: UsuarioCreate, db: Session = Depends(get_db)):
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.login == form_data.username).first()
+    
+    # Usando sha256_crypt
     if not usuario or not verificar_senha(form_data.password, usuario.senha_hash):
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
