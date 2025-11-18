@@ -9,6 +9,8 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
+import time
+from sqlalchemy.exc import OperationalError
 
 # --- Configurações de Segurança e Constantes ---
 SECRET_KEY = "CHAVESECRETAFODA"  # guarde fora do código em produção
@@ -34,8 +36,11 @@ app = FastAPI()
 # 2️ Configura CORS
 
 origins = [
-    "http://127.0.0.1:5500",  # Live Server (VSCode)
-    "http://localhost:5500",  # Live Server alternativa
+    "*",                        # NOVO: Permite qualquer origem. Essencial para ambientes de teste.
+    "http://127.0.0.1",           # NOVO: Endereço IP sem porta
+    "http://localhost",           # NOVO: Nome do host sem porta
+    "http://127.0.0.1:5500",    # Já existia
+    "http://localhost:5500",    # Já existia
 ]
 
 app.add_middleware(
@@ -47,8 +52,17 @@ app.add_middleware(
 )
 
 # 3️ Banco de dados
-# Lembrete: A senha do seu banco de dados está exposta aqui. Em produção, use variáveis de ambiente.
-SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://root:Joaolopes05%3A@localhost:3306/projeto_codego"
+import os
+# As credenciais agora vêm das variáveis de ambiente definidas no docker-compose.yml
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+# IMPORTANTE: No Docker, o host é o nome do serviço (db) e não localhost
+DB_HOST = os.getenv("DB_HOST") 
+DB_NAME = os.getenv("DB_NAME")
+
+# Constrói a URL usando as variáveis de ambiente
+SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:3306/{DB_NAME}"
+
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -64,7 +78,34 @@ class Usuario(Base):
     login = Column(String(100), unique=True, nullable=False)
     departamento = Column(String(100), nullable=False)
 
-Base.metadata.create_all(bind=engine)
+MAX_RETRIES = 10
+RETRY_DELAY = 5  # segundos
+
+def wait_for_db_and_create_tables():
+    """Tenta conectar ao DB e criar as tabelas com retentativas."""
+    print("Tentando conectar ao banco de dados...")
+    for i in range(MAX_RETRIES):
+        try:
+            # Tenta criar todas as tabelas. Isso força uma conexão imediata.
+            Base.metadata.create_all(bind=engine)
+            print("Conexão com o DB bem-sucedida e tabelas criadas!")
+            return
+        except OperationalError as e:
+            # OperationalError é esperado se o DB ainda não estiver escutando
+            if i < MAX_RETRIES - 1:
+                print(f"Tentativa {i+1}/{MAX_RETRIES} falhou. Erro: {e.__class__.__name__}. Aguardando {RETRY_DELAY}s...")
+                time.sleep(RETRY_DELAY)
+            else:
+                print("Todas as tentativas falharam. Erro fatal.")
+                # Se todas as tentativas falharem, levanta o erro original para o Uvicorn falhar
+                raise e
+        except Exception as e:
+                # Captura outros erros inesperados na inicialização
+                print(f"Erro inesperado durante a inicialização do DB: {e}")
+                raise e
+
+# Chamada da função para garantir a inicialização antes que o Uvicorn inicie
+wait_for_db_and_create_tables()
 
 # 5️ Modelos Pydantic
 class UsuarioCreate(BaseModel):
@@ -73,6 +114,9 @@ class UsuarioCreate(BaseModel):
     senha: str
     login: str
     departamento: str
+
+class EmailData(BaseModel):
+    email: EmailStr
 
 # 6️ Segurança e utilidades
 # MUDANÇA: Alterado de "bcrypt" para "sha256_crypt" para evitar o erro de compatibilidade.
@@ -153,6 +197,16 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     acess_token = criar_token_acesso(data={"sub": usuario.login}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     return {"access_token": acess_token, "token_type": "bearer"}
 
+@app.post("/esqueci-senha")
+def forgot_password(data: EmailData, db: Session = Depends(get_db)):
+    # ... lógica de busca ...
+    
+    if usuario:
+        # LÓGICA REAL: Gerar token de redefinição e enviar email
+        print(f"Simulando envio de redefinição para: {usuario.email}")
+    
+    # Retorna sucesso sempre para evitar enumeração de usuários
+    return {"msg": "Se o email estiver cadastrado, um link de redefinição foi enviado."}
 
 @app.get("/rota-protegida")
 def rota_protegida(usuario: Usuario = Depends(verificar_token)):
@@ -167,6 +221,3 @@ def health_check(db: Session = Depends(get_db)):
         return {"status": "ok", "database": "connected"}
     except Exception:
         return {"status": "error", "database": "disconnected"}
-    
-
-    # sdadasdasd$$##

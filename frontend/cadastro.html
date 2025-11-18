@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Usuário</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-lg bg-white p-8 rounded-xl shadow-2xl border border-gray-100">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6 text-center">
+            Cadastrar Novo Usuário
+        </h1>
+        
+        <!-- Formulário de Cadastro -->
+        <form id="cadastroForm" class="space-y-5">
+            <div>
+                <label for="nome" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                <input type="text" id="nome" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            </div>
+
+            <div>
+                <label for="login" class="block text-sm font-medium text-gray-700 mb-1">Login de Acesso</label>
+                <input type="text" id="login" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            </div>
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" id="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            </div>
+
+            <div>
+                <label for="departamento" class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
+                <input type="text" id="departamento" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            </div>
+
+            <div>
+                <label for="senha" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                <input type="password" id="senha" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            </div>
+
+            <div>
+                <label for="confirmar_senha" class="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha</label>
+                <input type="password" id="confirmar_senha" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            </div>
+
+            <button type="submit" 
+                    id="submitButton"
+                    class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-blue-400"
+                    >
+                Cadastrar
+            </button>
+            <p class="mt-4 text-center text-sm text-gray-600">
+                Já tem uma conta? <a href="login.html" class="text-blue-600 hover:text-blue-800 font-medium">Faça login aqui</a>.
+            </p>
+        </form>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden text-center mt-5">
+            <svg class="animate-spin h-5 w-5 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-sm text-gray-500 mt-2">Processando...</p>
+        </div>
+
+    </div>
+
+    <!-- Modal de Mensagem Customizada -->
+    <div id="messageModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm transform transition-all scale-100">
+            <h3 id="modalTitle" class="text-lg font-semibold mb-3 text-gray-900">Mensagem</h3>
+            <p id="modalMessage" class="text-sm text-gray-700 mb-4"></p>
+            <button id="modalCloseButton" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-200">
+                OK
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000"; // !! IMPORTANTE: Verifique se esta porta é a que seu backend está exposto no Docker.
+
+        // Elementos do DOM
+        const form = document.getElementById("cadastroForm");
+        const submitButton = document.getElementById("submitButton");
+        const loadingIndicator = document.getElementById("loadingIndicator");
+        const modal = document.getElementById("messageModal");
+        const modalTitle = document.getElementById("modalTitle");
+        const modalMessage = document.getElementById("modalMessage");
+        const modalCloseButton = document.getElementById("modalCloseButton");
+
+        // Função para mostrar a mensagem customizada (substitui alert())
+        function showMessage(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Fecha o modal
+        modalCloseButton.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+
+        // Habilita/Desabilita o formulário e o indicador de loading
+        function toggleLoading(isLoading) {
+            submitButton.disabled = isLoading;
+            if (isLoading) {
+                loadingIndicator.classList.remove('hidden');
+                submitButton.textContent = 'Processando...';
+            } else {
+                loadingIndicator.classList.add('hidden');
+                submitButton.textContent = 'Cadastrar';
+            }
+        }
+
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            toggleLoading(true);
+
+            const nome = document.getElementById("nome").value.trim();
+            const login = document.getElementById("login").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const senha = document.getElementById("senha").value;
+            const confirmar = document.getElementById("confirmar_senha").value;
+            const departamento = document.getElementById("departamento").value;
+
+            if (senha !== confirmar) {
+                showMessage("Erro de Validação", "As senhas não coincidem!");
+                toggleLoading(false);
+                return;
+            }
+
+            const usuario = { nome, email, senha, login, departamento };
+
+            try {
+                const resp = await fetch(`${API_URL}/cadastro/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(usuario)
+                });
+
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    const detail = data.detail || "O servidor não respondeu com sucesso.";
+                    showMessage("Erro no Cadastro", "Detalhes: " + detail);
+                    return; // Permanece na tela de cadastro
+                }
+
+                // Sucesso
+                showMessage("Sucesso", "Usuário cadastrado com sucesso! Redirecionando para o login.");
+                // Adiciona um pequeno delay antes de redirecionar para o usuário ver a mensagem de sucesso
+                setTimeout(() => {
+                    window.location.href = "login.html";
+                }, 1500);
+
+            } catch (error) {
+                // Erro de rede (CORS, porta errada, servidor offline)
+                console.error("Erro de Conexão:", error);
+                showMessage(
+                    "Erro de Conexão", 
+                    `Não foi possível conectar ao servidor (${API_URL}). Verifique se o backend está rodando na porta correta (8000).`
+                );
+            } finally {
+                toggleLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>

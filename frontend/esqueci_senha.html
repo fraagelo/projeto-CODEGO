@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esqueci a Senha</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Container Principal de Recuperação -->
+    <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl border border-gray-100">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4 text-center">
+            Recuperar Senha
+        </h1>
+        <p class="text-center text-gray-600 mb-8">
+            Informe seu email cadastrado. Enviaremos um link para redefinição.
+        </p>
+        
+        <!-- Formulário de Esqueci a Senha -->
+        <form id="forgotPasswordForm" class="space-y-6">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Cadastrado</label>
+                <input type="email" id="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150" placeholder="seu.email@exemplo.com">
+            </div>
+
+            <button type="submit" 
+                    id="submitButton"
+                    class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-blue-400"
+                    >
+                Enviar Link de Redefinição
+            </button>
+            <p class="mt-4 text-center text-sm text-gray-600">
+                <a href="login.html" class="text-blue-600 hover:text-blue-800 font-medium">Lembrei da senha. Voltar ao Login</a>
+            </p>
+        </form>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden text-center mt-5">
+            <svg class="animate-spin h-5 w-5 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-sm text-gray-500 mt-2">Processando solicitação...</p>
+        </div>
+
+    </div>
+
+    <!-- Modal de Mensagem Customizada -->
+    <div id="messageModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm transform transition-all scale-100">
+            <h3 id="modalTitle" class="text-lg font-semibold mb-3 text-gray-900">Mensagem</h3>
+            <p id="modalMessage" class="text-sm text-gray-700 mb-4"></p>
+            <button id="modalCloseButton" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-200">
+                OK
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000"; // !! IMPORTANTE: Verifique a porta do seu backend
+
+        // Elementos do DOM
+        const form = document.getElementById("forgotPasswordForm");
+        const submitButton = document.getElementById("submitButton");
+        const loadingIndicator = document.getElementById("loadingIndicator");
+        const modal = document.getElementById("messageModal");
+        const modalTitle = document.getElementById("modalTitle");
+        const modalMessage = document.getElementById("modalMessage");
+        const modalCloseButton = document.getElementById("modalCloseButton");
+
+        // Função para mostrar a mensagem customizada (substitui alert())
+        function showMessage(title, message, callback = null) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            
+            // Remove listeners antigos para evitar chamadas múltiplas do callback
+            const newCloseButton = modalCloseButton.cloneNode(true);
+            modalCloseButton.parentNode.replaceChild(newCloseButton, modalCloseButton);
+
+            newCloseButton.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                if (callback) callback();
+            });
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Habilita/Desabilita o formulário e o indicador de loading
+        function toggleLoading(isLoading) {
+            submitButton.disabled = isLoading;
+            if (isLoading) {
+                loadingIndicator.classList.remove('hidden');
+                submitButton.textContent = 'Enviando...';
+            } else {
+                loadingIndicator.classList.add('hidden');
+                submitButton.textContent = 'Enviar Link de Redefinição';
+            }
+        }
+
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            toggleLoading(true);
+
+            const email = document.getElementById("email").value.trim();
+            const payload = { email: email };
+
+            try {
+                // Endpoint hipotético para redefinição de senha
+                const resp = await fetch(`${API_URL}/esqueci-senha`, { 
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    const detail = data.detail || "Não foi possível enviar o email de redefinição.";
+                    // Em um ambiente real, muitas vezes o backend retorna sucesso mesmo se o email não existir, 
+                    // para evitar enumeração de usuários. Mas aqui, tratamos a falha.
+                    showMessage("Erro", "Detalhes: " + detail);
+                    return; 
+                }
+
+                // Sucesso (A redefinição foi solicitada)
+                showMessage("Sucesso", 
+                    "Se o email estiver cadastrado, um link de redefinição de senha foi enviado. Verifique sua caixa de entrada e spam.", 
+                    () => {
+                        // Redireciona para a página de login após o sucesso
+                        window.location.href = "login.html";
+                    }
+                );
+
+            } catch (error) {
+                // Erro de rede (CORS, porta errada, servidor offline)
+                console.error("Erro de Conexão:", error);
+                showMessage(
+                    "Erro de Conexão", 
+                    `Não foi possível conectar ao servidor (${API_URL}). Verifique se o backend está rodando.`
+                );
+            } finally {
+                toggleLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>

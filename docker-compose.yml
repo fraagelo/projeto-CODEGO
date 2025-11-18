@@ -1,23 +1,17 @@
 services:
-  app:
-    build: .
+  backend:
+    build: 
+      context: ./backend
     ports:
       - "8000:8000"
     environment:
-      - SQLALCHEMY_DATABASE_URL=mysql+mysqlconnector://root:Joaolopes05@:db:3306/projeto_codego
-    depends_on:
-      - db
+      DB_HOST: host.docker.internal
+      DB_USER: root
+      DB_PASSWORD: "Joaolopes05:"
+      DB_NAME: projeto_codego
 
-  db:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: "Joaolopes05:"
-      MYSQL_DATABASE: projeto_codego
+  frontend:
+    build:
+      context: ./frontend
     ports:
-      - "3306:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-
-volumes:
-  mysql-data:
+      - "80:80"
