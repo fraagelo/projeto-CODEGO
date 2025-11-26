@@ -8,3 +8,5 @@ python-jose[cryptography]>=3.3.0
 mysql-connector-python
 email-validator
 python-multipart
+python-dotenv
+alembic

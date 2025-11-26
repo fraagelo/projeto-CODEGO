@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Área Restrita</title>
+    <title>Dashboard - CodeGO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Define a fonte Inter */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
@@ -14,155 +13,113 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center p-4">
 
-    <!-- Container Principal do Dashboard -->
-    <div id="dashboardContainer" class="w-full max-w-4xl bg-white p-8 rounded-xl shadow-2xl border border-gray-100 hidden">
+    <div class="w-full max-w-4xl bg-white p-8 rounded-xl shadow-2xl border border-gray-100 mt-10">
+        
         <div class="flex justify-between items-center mb-6 border-b pb-4">
-            <h1 class="text-3xl font-bold text-gray-900">
-                Dashboard Principal
+            <h1 class="text-3xl font-extrabold text-blue-600">
+                Dashboard CodeGO
             </h1>
-            <button id="logoutButton" class="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition duration-200 shadow-md">
+            <button id="logoutButton" class="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-150">
                 Sair
             </button>
         </div>
         
-        <h2 class="text-xl font-semibold text-gray-700 mb-4">
-            Mensagem da Rota Protegida:
-        </h2>
-
-        <!-- Conteúdo Carregado pela API -->
-        <p id="conteudo" class="p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-md font-mono whitespace-pre-wrap">
-            Carregando...
-        </p>
-
-        <div id="userInfo" class="mt-8 pt-4 border-t text-sm text-gray-600">
-            <p>Se você está vendo esta mensagem, seu token JWT está ativo.</p>
+        <div class="space-y-4">
+            <div id="welcomeMessage" class="text-xl font-medium text-gray-800">
+                Carregando informações do usuário...
+            </div>
+            
+            <div id="content" class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-400">
+                <h2 class="text-2xl font-semibold mb-3 text-blue-800">Área Protegida</h2>
+                <p class="text-gray-600">Se você está vendo esta mensagem, significa que seu token de acesso está funcionando corretamente para se comunicar com o backend FastAPI.</p>
+                <ul class="mt-4 space-y-2 text-sm text-gray-700">
+                    <li class="flex items-center"><span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span> Aqui você listará as Empresas.</li>
+                    <li class="flex items-center"><span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span> Aqui você gerenciará os Contatos.</li>
+                    <li class="flex items-center"><span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span> Aqui você registrará as Interações.</li>
+                </ul>
+            </div>
         </div>
-    </div>
 
-    <!-- Loading Indicator Global -->
-    <div id="pageLoadingIndicator" class="flex flex-col items-center justify-center p-8">
-        <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <p class="text-lg text-gray-500 mt-3">Carregando conteúdo...</p>
-    </div>
-
-
-    <!-- Modal de Mensagem Customizada (MESMO USADO NO LOGIN/CADASTRO) -->
-    <div id="messageModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm transform transition-all scale-100">
-            <h3 id="modalTitle" class="text-lg font-semibold mb-3 text-gray-900">Mensagem</h3>
-            <p id="modalMessage" class="text-sm text-gray-700 mb-4"></p>
-            <button id="modalCloseButton" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-200">
-                OK
-            </button>
+        <div id="errorMessage" class="hidden mt-6 p-4 bg-red-100 text-red-700 border border-red-400 rounded-lg">
+            <p id="errorText" class="font-semibold"></p>
+            <p class="text-sm mt-1">Redirecionando para o login em 3 segundos...</p>
         </div>
-    </div>
 
+    </div>
 
     <script>
-        // Lógica de Dashboard em JavaScript
-        const API_URL = "http://127.0.0.1:8000"; // !! IMPORTANTE: Verifique a porta do seu backend
-
-        // Elementos do DOM
-        const dashboardContainer = document.getElementById("dashboardContainer");
-        const pageLoadingIndicator = document.getElementById("pageLoadingIndicator");
-        const conteudoElement = document.getElementById('conteudo');
+        const API_URL = "http://127.0.0.1:8000"; 
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const errorMessageDiv = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
         const logoutButton = document.getElementById('logoutButton');
 
-        // Elementos do Modal
-        const modal = document.getElementById("messageModal");
-        const modalTitle = document.getElementById("modalTitle");
-        const modalMessage = document.getElementById("modalMessage");
-        const modalCloseButton = document.getElementById("modalCloseButton");
-
-        // Função para mostrar a mensagem customizada (substitui alert())
-        function showMessage(title, message, callback = null) {
-            modalTitle.textContent = title;
-            modalMessage.textContent = message;
-            
-            // Remove listeners antigos para evitar chamadas múltiplas do callback
-            const newCloseButton = modalCloseButton.cloneNode(true);
-            modalCloseButton.parentNode.replaceChild(newCloseButton, modalCloseButton);
-
-            newCloseButton.addEventListener('click', () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                if (callback) callback();
-            });
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        // Função para realizar logout
         function logout() {
-            localStorage.removeItem('token');
-            showMessage("Sessão Encerrada", "Você foi desconectado(a). Redirecionando para o login.", () => {
-                window.location.href = 'login.html';
-            });
+            // Remove o token para encerrar a sessão
+            localStorage.removeItem('access_token');
+            // Redireciona para a página de login
+            window.location.href = 'login.html';
         }
-        
-        // Listener para o botão de logout
+
         logoutButton.addEventListener('click', logout);
 
-
-        async function carregarPagina() {
-            // 1. Mostrar carregamento e esconder conteúdo
-            pageLoadingIndicator.classList.remove('hidden');
-            dashboardContainer.classList.add('hidden');
-
-            const token = localStorage.getItem('token');
+        async function fetchProtectedData() {
+            const token = localStorage.getItem('access_token');
+            
             if (!token) {
-                // Token ausente
-                showMessage('Acesso Restrito', 'Você precisa fazer login para acessar esta página.', () => {
-                    window.location.href = 'login.html';
-                });
+                // Se não houver token, redireciona imediatamente
+                showError("Acesso Negado: Token não encontrado.", true);
                 return;
             }
 
             try {
                 const resp = await fetch(`${API_URL}/rota-protegida`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
+                    method: 'GET',
+                    headers: {
+                        // Envia o token no cabeçalho Authorization no formato Bearer
+                        'Authorization': `Bearer ${token}` 
+                    }
                 });
 
-                if (!resp.ok) {
-                    // Token Inválido ou Expirado (Geralmente 401 Unauthorized)
+                if (resp.ok) {
                     const data = await resp.json();
-                    const detail = data.detail || 'Token Inválido ou Expirado.';
-                    
-                    // Limpa o token local e redireciona
-                    localStorage.removeItem('token');
-                    showMessage('Acesso Não Autorizado', `Falha no acesso à rota protegida: ${detail}. Faça login novamente.`, () => {
-                        window.location.href = 'login.html';
-                    });
-                    return;
+                    // Exibe a mensagem de sucesso (ex: "Olá, [Nome do Usuário]. Você está autenticado.")
+                    welcomeMessage.textContent = data.mensagem;
+                    welcomeMessage.classList.add('text-green-700');
+
+                } else if (resp.status === 401) {
+                    // Token inválido ou expirado
+                    showError("Sessão Expirada ou Token Inválido. Faça login novamente.", true);
+                } else {
+                    // Outro erro de servidor
+                    const data = await resp.json();
+                    showError(`Erro ao carregar dados: ${data.detail || resp.statusText}`, true);
                 }
 
-                // 2. Sucesso: Exibir conteúdo
-                const data = await resp.json();
-                conteudoElement.textContent = JSON.stringify(data, null, 2); // Formata JSON para melhor leitura
-                
-                // 3. Esconder carregamento e mostrar dashboard
-                pageLoadingIndicator.classList.add('hidden');
-                dashboardContainer.classList.remove('hidden');
-
-            } catch (err) {
-                // Erro de Conexão com o Servidor
-                console.error(err);
-                showMessage(
-                    'Erro de Conexão', 
-                    `Não foi possível conectar ao servidor (${API_URL}). Verifique se o backend está ativo.`
-                );
-                // Mesmo em caso de falha de conexão, mantemos o dashboard oculto
+            } catch (error) {
+                console.error("Erro de Conexão:", error);
+                showError("Erro de conexão com o servidor. Verifique o backend.", true);
             }
         }
 
-        // Inicia o carregamento da página após o DOM estar pronto
-        window.onload = carregarPagina;
+        function showError(message, shouldRedirect) {
+            errorText.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+            welcomeMessage.textContent = "Erro de Autenticação.";
+            welcomeMessage.classList.add('text-red-700');
+
+            if (shouldRedirect) {
+                // Redireciona automaticamente após 3 segundos
+                setTimeout(() => {
+                    logout();
+                }, 3000);
+            }
+        }
+
+        // Inicia a verificação de token e o carregamento dos dados protegidos
+        fetchProtectedData();
     </script>
 </body>
 </html>

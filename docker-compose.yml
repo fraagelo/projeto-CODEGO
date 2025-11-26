@@ -9,6 +9,8 @@ services:
       DB_USER: root
       DB_PASSWORD: "Joaolopes05:"
       DB_NAME: projeto_codego
+    volumes:
+      - ./backend:/app
 
   frontend:
     build:
